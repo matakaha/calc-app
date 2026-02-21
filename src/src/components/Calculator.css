@@ -1,0 +1,17 @@
+.calculator {
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  padding: 16px;
+  background-color: #000000;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 400px) {
+  .calculator {
+    max-width: 100%;
+    padding: 12px;
+    border-radius: 0;
+  }
+}
