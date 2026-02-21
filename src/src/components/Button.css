@@ -1,0 +1,71 @@
+.calc-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 400;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  border: none;
+  border-radius: 50%;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  background-color: #333333;
+  color: #ffffff;
+  padding: 0;
+}
+
+.calc-button:hover {
+  background-color: #444444;
+}
+
+.calc-button:active {
+  transform: scale(0.95);
+}
+
+/* 演算子ボタン */
+.calc-button.operator {
+  background-color: #ff9f0a;
+  color: #ffffff;
+}
+
+.calc-button.operator:hover {
+  background-color: #ffb340;
+}
+
+.calc-button.operator.active {
+  background-color: #ffffff;
+  color: #ff9f0a;
+}
+
+/* 機能ボタン (AC, DEL, +/−) */
+.calc-button.function {
+  background-color: #a5a5a5;
+  color: #000000;
+}
+
+.calc-button.function:hover {
+  background-color: #c0c0c0;
+}
+
+/* 0 ボタン（横長） */
+.calc-button.wide {
+  border-radius: 36px;
+  aspect-ratio: auto;
+  padding: 0 24px;
+  justify-content: flex-start;
+  height: 100%;
+}
+
+@media (max-width: 400px) {
+  .calc-button {
+    font-size: 1.2rem;
+  }
+
+  .calc-button.wide {
+    padding: 0 18px;
+  }
+}
