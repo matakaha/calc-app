@@ -1,0 +1,120 @@
+# デプロイ ワークフロー
+# main ブランチへの push 時に E2E テスト → Azure Static Web Apps デプロイをシリアルに実施する
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write   # OIDC 認証に必要
+  contents: read
+
+jobs:
+  # ──────────────────────────────────────────────
+  # 1. E2E テスト (Playwright)
+  # ──────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Node.js のセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            src/package-lock.json
+
+      - name: ルート依存関係のインストール (Playwright)
+        run: npm ci
+
+      - name: アプリ依存関係のインストール
+        run: npm ci
+        working-directory: src
+
+      - name: Playwright ブラウザのインストール (Edge)
+        run: npx playwright install msedge --with-deps
+
+      - name: E2E テストの実行
+        run: npx playwright test
+        env:
+          CI: true
+
+      - name: テストレポートのアップロード
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+  # ──────────────────────────────────────────────
+  # 2. Azure Static Web Apps デプロイ
+  #    e2e-tests が成功した場合のみ実行
+  # ──────────────────────────────────────────────
+  deploy:
+    name: Deploy to Azure SWA
+    needs: e2e-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ steps.swa-deploy.outputs.static_web_app_url }}
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Node.js のセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+
+      - name: アプリ依存関係のインストール
+        run: npm ci
+        working-directory: src
+
+      - name: アプリのビルド
+        run: npm run build
+        working-directory: src
+
+      - name: Azure へのログイン (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: SWA デプロイトークンの取得
+        id: swa-token
+        run: |
+          # SWA の deployment token を取得
+          DEPLOYMENT_TOKEN=$(az staticwebapp secrets list \
+            --name "calc-app-20260222" \
+            --resource-group "rg-cals-app-20260222" \
+            --query "properties.apiKey" \
+            --output tsv)
+
+          # トークンをマスクしてログに表示されないようにする
+          echo "::add-mask::${DEPLOYMENT_TOKEN}"
+
+          # 後続ステップで使用できるように出力に設定
+          echo "token=${DEPLOYMENT_TOKEN}" >> "$GITHUB_OUTPUT"
+
+      - name: Azure Static Web Apps へのデプロイ
+        id: swa-deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: src
+          output_location: dist
+          skip_app_build: true

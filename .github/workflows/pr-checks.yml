@@ -1,0 +1,57 @@
+# PR チェック ワークフロー
+# プルリクエスト時に Code Scanning と依存関係レビューをシリアルに実施する
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ──────────────────────────────────────────────
+  # 1. Code Scanning (CodeQL)
+  # ──────────────────────────────────────────────
+  code-scanning:
+    name: Code Scanning (CodeQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: CodeQL の初期化
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # error / critical レベルの脆弱性でワークフローを失敗させる
+          queries: security-and-quality
+
+      - name: CodeQL オートビルド
+        uses: github/codeql-action/autobuild@v3
+
+      - name: CodeQL 解析の実行
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+
+  # ──────────────────────────────────────────────
+  # 2. 依存関係レビュー (dependency-review-action)
+  #    code-scanning が成功した場合のみ実行
+  # ──────────────────────────────────────────────
+  dependency-review:
+    name: Dependency Review
+    needs: code-scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: 依存関係レビューの実行
+        uses: actions/dependency-review-action@v4
+        with:
+          # high 以上の脆弱性で失敗させる
+          fail-on-severity: high
