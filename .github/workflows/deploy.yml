@@ -63,9 +63,6 @@ jobs:
     needs: e2e-tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment:
-      name: production
-      url: ${{ steps.swa-deploy.outputs.static_web_app_url }}
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v4
