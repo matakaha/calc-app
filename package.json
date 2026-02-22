@@ -1,0 +1,13 @@
+{
+  "name": "calc-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:install": "npx playwright install msedge"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}
